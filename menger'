@@ -1,0 +1,202 @@
+import random
+import time
+import numpy as np
+import colorsys
+import pygame
+from pygame.locals import *
+from OpenGL.GL import *
+from OpenGL.GLU import *
+
+class Box:
+    def __init__(self, x, y, z, w, h, d, level):
+        self.pos = [x, y, z]
+        self.w = w
+        self.h = h
+        self.d = d
+        self.level = level
+
+        # Create VBOs
+        self.vertex_vbo = self.create_vertex_vbo()
+
+    def create_vertex_vbo(self):
+        # Define vertices for a box
+        vertices = np.array([
+            # Front face
+            [self.pos[0] - self.w / 2, self.pos[1] - self.h / 2, self.pos[2] + self.d / 2],
+            [self.pos[0] + self.w / 2, self.pos[1] - self.h / 2, self.pos[2] + self.d / 2],
+            [self.pos[0] + self.w / 2, self.pos[1] + self.h / 2, self.pos[2] + self.d / 2],
+            [self.pos[0] - self.w / 2, self.pos[1] + self.h / 2, self.pos[2] + self.d / 2],
+            # Back face
+            [self.pos[0] - self.w / 2, self.pos[1] - self.h / 2, self.pos[2] - self.d / 2],
+            [self.pos[0] + self.w / 2, self.pos[1] - self.h / 2, self.pos[2] - self.d / 2],
+            [self.pos[0] + self.w / 2, self.pos[1] + self.h / 2, self.pos[2] - self.d / 2],
+            [self.pos[0] - self.w / 2, self.pos[1] + self.h / 2, self.pos[2] - self.d / 2]
+        ], dtype=np.float32)
+
+        # Create and bind VBO for vertices
+        vertex_vbo = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, vertex_vbo)
+        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
+
+        return vertex_vbo
+
+    def generate(self):
+        boxes = []
+        if self.level > 0:
+            new_w = self.w / 3
+            new_h = self.h / 3
+            new_d = self.d / 3
+            for x in range(-1, 2):
+                for y in range(-1, 2):
+                    for z in range(-1, 2):
+                        if abs(x) + abs(y) + abs(z) > 1:
+                            b = Box(self.pos[0] + x * new_w, self.pos[1] + y * new_h, self.pos[2] + z * new_d,
+                                    new_w, new_h, new_d, self.level - 1)
+                            boxes.append(b)
+        else:
+            boxes.append(self)
+        return boxes
+
+    def show(self):
+        # Bind the vertex VBO
+        glBindBuffer(GL_ARRAY_BUFFER, self.vertex_vbo)
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glVertexPointer(3, GL_FLOAT, 0, None)
+
+        # Draw the front face
+        glDrawArrays(GL_QUADS, 0, 4)
+
+        # Draw the back face
+        glDrawArrays(GL_QUADS, 4, 4)
+
+        # Unbind the VBO
+        glDisableClientState(GL_VERTEX_ARRAY)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+
+class MySketch:
+    def __init__(self):
+        pygame.init()
+        self.width = 800
+        self.height = 600
+        self.screen = pygame.display.set_mode((self.width, self.height), DOUBLEBUF | OPENGL)
+
+        gluPerspective(60, (self.width / self.height), 0.1, 100.0)
+        glTranslatef(0.0, 0.0, -30)
+
+        self.sponge = []
+        self.initial_cube_size = 20
+        self.subdivision_level = 4
+        self.create_initial_sponge()
+
+        self.rotation_angle = 0
+        self.rotation_speed = 25
+        self.color_index = 0
+        self.color_palettes = []
+        self.generate_interesting_color_palettes()
+
+        self.update_delay = 0.8
+        self.last_update_time = time.time()
+
+    def generate_interesting_color_palettes(self):
+        def random_palette():
+            return [(random.random(), random.random(), random.random()) for _ in range(4)]
+
+        def complementary_palette():
+            base = random.random()
+            return [
+                colorsys.hsv_to_rgb(base, 1.0, 1.0),
+                colorsys.hsv_to_rgb((base + 0.5) % 1.0, 1.0, 1.0),
+                colorsys.hsv_to_rgb((base + 0.33) % 1.0, 1.0, 1.0),
+                colorsys.hsv_to_rgb((base + 0.66) % 1.0, 1.0, 1.0)
+            ]
+
+        def analogous_palette():
+            base = random.random()
+            return [
+                colorsys.hsv_to_rgb(base, 1.0, 1.0),
+                colorsys.hsv_to_rgb((base + 0.1) % 1.0, 1.0, 1.0),
+                colorsys.hsv_to_rgb((base - 0.1) % 1.0, 1.0, 1.0),
+                colorsys.hsv_to_rgb((base + 0.2) % 1.0, 1.0, 1.0)
+            ]
+
+        def triadic_palette():
+            base = random.random()
+            return [
+                colorsys.hsv_to_rgb(base, 1.0, 1.0),
+                colorsys.hsv_to_rgb((base + 1/3) % 1.0, 1.0, 1.0),
+                colorsys.hsv_to_rgb((base + 2/3) % 1.0, 1.0, 1.0),
+                colorsys.hsv_to_rgb((base + 0.5) % 1.0, 1.0, 1.0)
+            ]
+
+        palettes = [random_palette, complementary_palette, analogous_palette, triadic_palette]
+
+        for _ in range(100):
+            palette_func = random.choice(palettes)
+            self.color_palettes.append(palette_func())
+
+    def create_initial_sponge(self):
+        b = Box(-1, -1, -1, self.initial_cube_size, self.initial_cube_size, self.initial_cube_size, self.subdivision_level)
+        self.sponge.append(b)
+
+    def update_color_palette(self):
+        current_time = time.time()
+        if current_time - self.last_update_time > self.update_delay:
+            self.color_index = (self.color_index + 1) % len(self.color_palettes)
+            self.last_update_time = current_time
+
+    def draw(self):
+        self.update_color_palette()
+
+        self.rotation_angle += self.rotation_speed
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glLoadIdentity()
+        gluPerspective(60, (self.width / self.height), 0.1, 100.0)
+        glTranslatef(0.0, 0.0, -30)
+        glRotatef(self.rotation_angle, 1, 1, 0)
+
+        color_palette = self.color_palettes[self.color_index]
+
+        for i, b in enumerate(self.sponge):
+            color = color_palette[i % len(color_palette)]
+            glColor3f(*color)
+            b.show()
+
+        # Add rotation in the opposite direction
+        glLoadIdentity()
+        glTranslatef(0.0, 0.0, -30)
+        glRotatef(self.rotation_angle, -1, -1, 0)  # Rotate in the opposite direction
+
+        for i, b in enumerate(self.sponge):
+            color = color_palette[i % len(color_palette)]
+            glColor3f(*color)
+            b.show()
+
+        pygame.display.flip()
+
+    def mousePressed(self):
+        next_boxes = []
+        for b in self.sponge:
+            new_boxes = b.generate()
+            next_boxes.extend(new_boxes)
+        self.sponge.clear()
+        self.sponge.extend(next_boxes)
+
+
+if __name__ == '__main__':
+    sketch = MySketch()
+    clock = pygame.time.Clock()
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                sketch.mousePressed()
+
+        sketch.draw()
+        clock.tick(15)
+
+    pygame.quit()
