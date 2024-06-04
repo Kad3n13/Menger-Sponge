@@ -4,17 +4,31 @@ Developing this project was a captivating journey into the realm of 3D graphics 
 
 I faced challenges in ensuring all sides of the cubes were visible and implemented various color palettes to enhance visual interest. Overall, it was an enriching experience that deepened my understanding of computer graphics.
 
+Practical example
+
+https://youtu.be/TyTLhIkoXYA
 
 Examples
 
 1
 
+![ex sponge](https://github.com/Kad3n13/Menger-Sponge/assets/159424810/e5a0c7dc-995a-4f59-a0e9-418646570f7c)
+
 2
+
+![ex sponge 1](https://github.com/Kad3n13/Menger-Sponge/assets/159424810/c8bca748-1b2b-459f-b2ac-464e974ff45e)
 
 3
 
+![ex sponge 2](https://github.com/Kad3n13/Menger-Sponge/assets/159424810/69bbd66e-f273-4683-aa33-a53f522086e9)
+
 4
 
+![ex sponge 3](https://github.com/Kad3n13/Menger-Sponge/assets/159424810/ce236935-ad2c-4f7b-8ab4-431d590c2b2a)
+
+5
+
+![ex sponge 4](https://github.com/Kad3n13/Menger-Sponge/assets/159424810/0420fe94-9395-45ec-a861-e711fde0ac90)
 
 Project Overview
 
@@ -45,7 +59,7 @@ bash
 
 Check out the code and try it yourself! Contributions and feedback are welcome.
 
-@@@@@@@@@@@@@@@@@@@@@@@@
+[https://github.com/Kad3n13/Menger-Sponge/blob/main/menger']
 
 MIT License
 
